@@ -9,7 +9,12 @@ def create_dot (isAll, file_name, sub, dim, fct, ddr, fdr, ffr):
     f = open(file_name, 'w')
 
     # Start the output
-    f.write("digraph amp_md { overlap=false" + '\n')
+    f.write("digraph amp_md { overlap=false splines=true")
+
+    # Center diagram on the first subject area if this isn't the full graph
+    if not isAll:
+        f.write(' root="{root_id}"'.format(root_id=sub[0]))
+    f.write('\n\n')
 
     f.write("# Subject area(s)\n")
     if isAll:
@@ -17,64 +22,44 @@ def create_dot (isAll, file_name, sub, dim, fct, ddr, fdr, ffr):
             f.write('"' + cur_sub[0] + '"')  # Node name
             f.write(
                 ' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="palegreen"')  # Node shape
-            f.write(
-                ' label = <<table border="0" cellborder="0" cellpadding="3"><tr><td align="center"><b>{node_title}</b></td></tr>'.format(
-                    node_title=cur_sub[1]))  # Node title
-            if cur_sub[2] is None:
-                clean_desc = 'No Description'
-            else:
-                clean_desc = html.escape(cur_sub[2].replace("\r\n", " "))
-            # f.write(' <tr><td align="center">{node_desc}</td></tr>'.format(node_desc=clean_desc))  # Node description
-            f.write('</table>>];\n')  # Close up the table
+            f.write(' label = "{node_title}"];\n'.format(node_title=cur_sub[1]))  # Node title
     else:
         f.write('"' + sub[0] + '"')  # Node name
         f.write(' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="palegreen"')  # Node shape
-        f.write(' label = <<table border="0" cellborder="0" cellpadding="3"><tr><td align="center"><b>{node_title}</b></td></tr>'.format(node_title=sub[1]))  # Node title
-        if sub[2] is None:
-            clean_desc = 'No Description'
-        else:
-            clean_desc = html.escape(sub[2].replace("\r\n", " "))
-        # f.write(' <tr><td align="center">{node_desc}</td></tr>'.format(node_desc=clean_desc))  # Node description
-        f.write('</table>>];\n')  # Close up the table
-    f.write('\n')
+        f.write(' label = "{node_title}"];\n'.format(node_title=sub[1]))  # Node title
+    f.write('\n\n')
 
     f.write("# Dimension(s)\n")
     for cur_dimension in dim:
         f.write('"' + cur_dimension[0] + '"')  # Node name
         f.write(' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="lightblue"')  # Node shape
-        f.write(' label = <<table border="0" cellborder="0" cellpadding="3"><tr><td align="center"><b>{node_title}</b></td></tr>'.format(node_title=cur_dimension[1]))  # Node title
-        if cur_dimension[2] is None:
-            clean_desc = 'No Description'
-        else:
-            clean_desc = html.escape(cur_dimension[2].replace("\r\n"," "))
-        # f.write(' <tr><td align="center">{node_desc}</td></tr>'.format(node_desc=clean_desc))  # Node description
-        f.write('</table>>];\n')  # Close up the table
+        f.write(' label = "{node_title}'.format(node_title=cur_dimension[1]))  # Node title start
+        if isAll or cur_dimension[3] != sub[0]:
+            f.write('\\n({subject_area_id})'.format(subject_area_id=cur_dimension[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
     f.write('\n')
 
     f.write("# Fact(s)\n")
     for cur_fact in fct:
         f.write('"' + cur_fact[0] + '"')  # Node name
         f.write(' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="lightgoldenrodyellow"')  # Node shape
-        f.write(' label = <<table border="0" cellborder="0" cellpadding="3"><tr><td align="center"><b>{node_title}</b></td></tr>'.format(node_title=cur_fact[1]))  # Node title
-        if cur_fact[2] is None:
-            clean_desc = 'No Description'
-        else:
-            clean_desc = html.escape(cur_fact[2].replace("\r\n"," "))
-        # f.write(' <tr><td align="center">{node_desc}</td></tr>'.format(node_desc=clean_desc))  # Node description
-        f.write('</table>>];\n')  # Close up the table
+        f.write(' label = "{node_title}'.format(node_title=cur_fact[1]))  # Node title start
+        if isAll or cur_fact[3] != sub[0]:
+            f.write('\\n({subject_area_id})'.format(subject_area_id=cur_fact[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
     f.write('\n')
 
     # Relate dimensions to subject areas
     f.write("# Dimension to subject area\n")
     for cur_dimension in dim:
-        if cur_dimension[3] in sub:
+        if isAll or cur_dimension[3] in sub:
             f.write('"{type_guid}" -> "{subject_area_guid}";\n'.format(type_guid=cur_dimension[0], subject_area_guid=cur_dimension[3]))
     f.write('\n')
 
     # Relate facts to subject areas
     f.write("# Fact to subject area\n")
     for cur_fact in fct:
-        if cur_fact[3] in sub:
+        if isAll or cur_fact[3] in sub:
             f.write('"{fact_table_guid}" -> "{subject_area_guid}";\n'.format(fact_table_guid=cur_fact[0], subject_area_guid=cur_fact[3]))
     f.write('\n')
 
@@ -135,14 +120,16 @@ md_rows = md_cur.fetchall()
 md_subjects = [list(x) for x in md_rows]
 
 # Read the dimensions
-md_cur.execute("""select type_guid, type_name, type_description, subject_area_guid
-                  from {meta_db}..adf_type""".format(meta_db=parms.meta_db))
+md_cur.execute("""select type_guid, type_name, type_description, subject_area_guid, subject_area_id
+                  from {meta_db}..adf_type aty
+                  inner join {meta_db}..adf_subject_area asa using (subject_area_guid)""".format(meta_db=parms.meta_db))
 md_rows = md_cur.fetchall()
 md_dimensions = [list(x) for x in md_rows]
 
 # Read the fact tables
-md_cur.execute("""select fact_table_guid, fact_table_name, description, subject_area_guid
-                  from {meta_db}..adf_fact_table""".format(meta_db=parms.meta_db))
+md_cur.execute("""select fact_table_guid, fact_table_name, description, subject_area_guid, subject_area_id
+                  from {meta_db}..adf_fact_table aft
+                  inner join {meta_db}..adf_subject_area asa using (subject_area_guid);""".format(meta_db=parms.meta_db))
 md_rows = md_cur.fetchall()
 md_facts = [list(x) for x in md_rows]
 

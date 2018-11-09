@@ -8,7 +8,12 @@ Single subject area graphs take one subject area and capture every relationship 
 
 Subject areas are green, facts are yellow, dimensions are blue.
 
-The code is not optimized, it reads everything into memory and acts against these lists. All formatting is hard-coded. The code for the overall graph versus individual subject areas in clunky and should be refactored. No warranty is expressed or implied, your mileage may vary, ask your doctor if amp_viz is right for you...
+The current code creates subject area nodes, this may not produce the best visualization in all instances. It helps anchor dimensions and facts together that may not have direct reference roles. However, these relationships aren't 'real' from a logical model standpoint. Up next I'd like to explore creating sub-graphs by subject area which may be a better solution.
+
+### Why no pydot / pygraphviz?
+A pydot refactor may be useful in the future. I'm sure the code would be cleaner / prettier, but I'm unsure about losing the fine grained control of the dot file. I'm avoiding directly integrating graphviz as dot files can be used by other tools such as Gephi. In addition, I find the process of generating a usable / readable image requires a lot of trial and error and that's easiest from the command line.
+
+The code is not optimized, it reads everything into memory and acts against these lists. All formatting is hard-coded. The code for the overall graph versus individual subject areas is clunky and should be refactored. No warranty is expressed or implied, your mileage may vary, ask your doctor if amp_viz is right for you...
 
 ## Graph of AMP model used for Beginner Training
 

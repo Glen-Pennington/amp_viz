@@ -10,4 +10,6 @@ Subject areas are green, facts are yellow, dimensions are blue.
 
 The code is not optimized, it reads everything into memory and acts against these lists. All formatting is hard-coded. The code for the overall graph versus individual subject areas in clunky and should be refactored. No warranty is expressed or implied, your mileage may vary, ask your doctor if amp_viz is right for you...
 
+## Graph of AMP model used for Beginner Training
+
 ![ScreenShot](/student-all.png)

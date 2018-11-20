@@ -2,64 +2,112 @@ import argparse
 # Standard imports
 import itertools
 import pyodbc
-import html
 
-def create_dot (isAll, file_name, sub, dim, fct, ddr, fdr, ffr):
+def create_dot_cluster (file_name, sub, dim, fct, ddr, fdr, ffr):
     # Open the output file
     f = open(file_name, 'w')
 
     # Start the output
-    f.write("digraph amp_md { overlap=false splines=true")
+    f.write('digraph amp_md { overlap=false splines=true\n\n')
 
-    # Center diagram on the first subject area if this isn't the full graph
-    if not isAll:
-        f.write(' root="{root_id}"'.format(root_id=sub[0]))
-    f.write('\n\n')
+    f.write('graph [fontname="Calibri" fontsize="8"];\n')
+    f.write('node [fontname="Calibri" fontsize="8"];\n')
+    f.write('edge [fontname="Calibri" fontsize="8"];\n\n')
 
     f.write("# Subject area(s)\n")
-    if isAll:
-        for cur_sub in sub:
-            f.write('"' + cur_sub[0] + '"')  # Node name
-            f.write(
-                ' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="palegreen"')  # Node shape
-            f.write(' label = "{node_title}"];\n'.format(node_title=cur_sub[1]))  # Node title
-    else:
-        f.write('"' + sub[0] + '"')  # Node name
-        f.write(' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="palegreen"')  # Node shape
-        f.write(' label = "{node_title}"];\n'.format(node_title=sub[1]))  # Node title
+    for i,cur_sub in enumerate(sub):
+        f.write('subgraph cluster_{i} {{\n'.format(i=i))
+        f.write('  label="{node_title}";\n\n'.format(node_title=cur_sub[1]))  # Node name
+
+        f.write('  #Dimensions\n')
+        for cur_dimension in dim:
+            if cur_dimension[3] == cur_sub[0]:
+                f.write('  "{node_name}"'.format(node_name=cur_dimension[0]))  # Node name
+                f.write(' [shape="box", style="filled", fillcolor="lightblue",')  # Node shape
+                f.write(' label = "{node_title}"];\n'.format(node_title=cur_dimension[1]))  # Node title
+        f.write('\n')
+
+        f.write('  #Facts\n')
+        for cur_fact in fct:
+            if cur_fact[3] == cur_sub[0]:
+                f.write('  "{node_name}"'.format(node_name=cur_fact[0]))  # Node name
+                f.write(' [shape="box", style="filled", fillcolor="lightgoldenrodyellow",')  # Node shape
+                f.write(' label = "{node_title}"];\n'.format(node_title=cur_fact[1]))  # Node title start
+        f.write('\n')
+        f.write('}\n\n')
+
+    # Document reference roles (dim to dim)
+    f.write("# Reference role(s)\n")
+    for cur_ref in ddr:
+        f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
+        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to dimension roles
+    f.write("# Fact to dimension\n")
+    for cur_fk in fdr:
+        f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
+        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to fact relationships
+    f.write("# Fact to fact\n")
+    for cur_ff in ffr:
+        f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
+        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+    f.write('\n')
+
+    # Finish up the output
+    f.write("}" + '\n')
+    f.close()
+
+
+def create_dot_all (file_name, sub, dim, fct, ddr, fdr, ffr):
+    # Open the output file
+    f = open(file_name, 'w')
+
+    # Start the output
+    f.write('digraph amp_md { overlap=false splines=true\n\n')
+
+    f.write('graph [fontname="Calibri" fontsize="8"];\n')
+    f.write('node [fontname="Calibri" fontsize="8"];\n')
+    f.write('edge [fontname="Calibri" fontsize="8"];\n')
+
+    f.write("# Subject area(s)\n")
+    for cur_sub in sub:
+        f.write('"' + cur_sub[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="palegreen", ')  # Node shape
+        f.write(' label = "{node_title}"];\n'.format(node_title=cur_sub[1]))  # Node title
     f.write('\n\n')
 
     f.write("# Dimension(s)\n")
     for cur_dimension in dim:
         f.write('"' + cur_dimension[0] + '"')  # Node name
-        f.write(' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="lightblue"')  # Node shape
+        f.write(' [shape="box", style="filled", fillcolor="lightblue"')  # Node shape
         f.write(' label = "{node_title}'.format(node_title=cur_dimension[1]))  # Node title start
-        if isAll or cur_dimension[3] != sub[0]:
-            f.write('\\n({subject_area_id})'.format(subject_area_id=cur_dimension[4]))  # Add subject area id
+        f.write('\\n({subject_area_id})'.format(subject_area_id=cur_dimension[4]))  # Add subject area id
         f.write('"];\n')  # Close up the label
     f.write('\n')
 
     f.write("# Fact(s)\n")
     for cur_fact in fct:
         f.write('"' + cur_fact[0] + '"')  # Node name
-        f.write(' [shape="box", fontname="Calibri", fontsize="8", style="filled", fillcolor="lightgoldenrodyellow"')  # Node shape
+        f.write(' [shape="box", style="filled", fillcolor="lightgoldenrodyellow"')  # Node shape
         f.write(' label = "{node_title}'.format(node_title=cur_fact[1]))  # Node title start
-        if isAll or cur_fact[3] != sub[0]:
-            f.write('\\n({subject_area_id})'.format(subject_area_id=cur_fact[4]))  # Add subject area id
+        f.write('\\n({subject_area_id})'.format(subject_area_id=cur_fact[4]))  # Add subject area id
         f.write('"];\n')  # Close up the label
     f.write('\n')
 
     # Relate dimensions to subject areas
     f.write("# Dimension to subject area\n")
     for cur_dimension in dim:
-        if isAll or cur_dimension[3] in sub:
-            f.write('"{type_guid}" -> "{subject_area_guid}";\n'.format(type_guid=cur_dimension[0], subject_area_guid=cur_dimension[3]))
+        f.write('"{type_guid}" -> "{subject_area_guid}";\n'.format(type_guid=cur_dimension[0], subject_area_guid=cur_dimension[3]))
     f.write('\n')
 
     # Relate facts to subject areas
     f.write("# Fact to subject area\n")
     for cur_fact in fct:
-        if isAll or cur_fact[3] in sub:
+        if cur_fact[3] in sub:
             f.write('"{fact_table_guid}" -> "{subject_area_guid}";\n'.format(fact_table_guid=cur_fact[0], subject_area_guid=cur_fact[3]))
     f.write('\n')
 
@@ -67,26 +115,218 @@ def create_dot (isAll, file_name, sub, dim, fct, ddr, fdr, ffr):
     f.write("# Reference role(s)\n")
     for cur_ref in ddr:
         f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
-        f.write(' [label = "{reference_role_name}", fontname="Calibri", fontsize="8", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
     f.write('\n')
 
     # Document fact to dimension roles
     f.write("# Fact to dimension\n")
     for cur_fk in fdr:
         f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
-        f.write(' [label = "{fact_table_name} to {type_name}", fontname="Calibri", fontsize="8", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
     f.write('\n')
 
     # Document fact to fact relationships
     f.write("# Fact to fact\n")
     for cur_ff in ffr:
         f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
-        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", fontname="Calibri", fontsize="8", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
     f.write('\n')
 
     # Finish up the output
     f.write("}" + '\n')
     f.close()
+
+
+def create_dot_all_no_sub (file_name, sub, dim, fct, ddr, fdr, ffr):
+    # Open the output file
+    f = open(file_name, 'w')
+
+    # Start the output
+    f.write('digraph amp_md { overlap=false splines=true\n\n')
+
+    f.write('graph [fontname="Calibri" fontsize="8"];\n')
+    f.write('node [fontname="Calibri" fontsize="8"];\n')
+    f.write('edge [fontname="Calibri" fontsize="8"];\n')
+
+    f.write("# Dimension(s)\n")
+    for cur_dimension in dim:
+        f.write('"' + cur_dimension[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="lightblue"')  # Node shape
+        f.write(' label = "{node_title}'.format(node_title=cur_dimension[1]))  # Node title start
+        f.write('\\n({subject_area_id})'.format(subject_area_id=cur_dimension[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
+    f.write('\n')
+
+    f.write("# Fact(s)\n")
+    for cur_fact in fct:
+        f.write('"' + cur_fact[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="lightgoldenrodyellow"')  # Node shape
+        f.write(' label = "{node_title}'.format(node_title=cur_fact[1]))  # Node title start
+        f.write('\\n({subject_area_id})'.format(subject_area_id=cur_fact[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
+    f.write('\n')
+
+    # Document reference roles (dim to dim)
+    f.write("# Reference role(s)\n")
+    for cur_ref in ddr:
+        f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
+        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to dimension roles
+    f.write("# Fact to dimension\n")
+    for cur_fk in fdr:
+        f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
+        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to fact relationships
+    f.write("# Fact to fact\n")
+    for cur_ff in ffr:
+        f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
+        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+    f.write('\n')
+
+    # Finish up the output
+    f.write("}" + '\n')
+    f.close()
+
+
+def create_dot_sub(file_name, sub, dim, fct, ddr, fdr, ffr):
+    # Open the output file
+    f = open(file_name, 'w')
+
+    # Start the output
+    f.write('digraph amp_md { overlap=false splines=true')
+
+    f.write('graph [fontname="Calibri" fontsize="8"];\n')
+    f.write('node [fontname="Calibri" fontsize="8"];\n')
+    f.write('edge [fontname="Calibri" fontsize="8"];\n')
+
+    # Center diagram on the first subject area
+    f.write(' root="{root_id}"'.format(root_id=sub[0]))
+    f.write('\n\n')
+
+    f.write("# Subject area(s)\n")
+    f.write('"' + sub[0] + '"')  # Node name
+    f.write(' [shape="box", style="filled", fillcolor="palegreen"')  # Node shape
+    f.write(' label = "{node_title}"];\n'.format(node_title=sub[1]))  # Node title
+    f.write('\n')
+
+    f.write("# Dimension(s)\n")
+    for cur_dimension in dim:
+        f.write('"' + cur_dimension[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="lightblue"')  # Node shape
+        f.write(' label = "{node_title}'.format(node_title=cur_dimension[1]))  # Node title start
+        if cur_dimension[3] != sub[0]:
+            f.write('\\n({subject_area_id})'.format(subject_area_id=cur_dimension[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
+    f.write('\n')
+
+    f.write("# Fact(s)\n")
+    for cur_fact in fct:
+        f.write('"' + cur_fact[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="lightgoldenrodyellow"')  # Node shape
+        f.write(' label = "{node_title}'.format(node_title=cur_fact[1]))  # Node title start
+        if cur_fact[3] != sub[0]:
+            f.write('\\n({subject_area_id})'.format(subject_area_id=cur_fact[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
+    f.write('\n')
+
+    # Relate dimensions to subject areas
+    f.write("# Dimension to subject area\n")
+    for cur_dimension in dim:
+        if cur_dimension[3] in sub:
+            f.write('"{type_guid}" -> "{subject_area_guid}";\n'.format(type_guid=cur_dimension[0], subject_area_guid=cur_dimension[3]))
+    f.write('\n')
+
+    # Relate facts to subject areas
+    f.write("# Fact to subject area\n")
+    for cur_fact in fct:
+        if cur_fact[3] in sub:
+            f.write('"{fact_table_guid}" -> "{subject_area_guid}";\n'.format(fact_table_guid=cur_fact[0], subject_area_guid=cur_fact[3]))
+    f.write('\n')
+
+    # Document reference roles (dim to dim)
+    f.write("# Reference role(s)\n")
+    for cur_ref in ddr:
+        f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
+        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to dimension roles
+    f.write("# Fact to dimension\n")
+    for cur_fk in fdr:
+        f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
+        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to fact relationships
+    f.write("# Fact to fact\n")
+    for cur_ff in ffr:
+        f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
+        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+    f.write('\n')
+
+    # Finish up the output
+    f.write("}" + '\n')
+    f.close()
+
+
+def create_dot_sub_no_sub(file_name, sub, dim, fct, ddr, fdr, ffr):
+    # Open the output file
+    f = open(file_name, 'w')
+
+    # Start the output
+    f.write('digraph amp_md { overlap=false splines=true\n\n')
+
+    f.write('graph [fontname="Calibri" fontsize="8"];\n')
+    f.write('node [fontname="Calibri" fontsize="8"];\n')
+    f.write('edge [fontname="Calibri" fontsize="8"];\n')
+
+    f.write("# Dimension(s)\n")
+    for cur_dimension in dim:
+        f.write('"' + cur_dimension[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="lightblue"')  # Node shape
+        f.write(' label = "{node_title}'.format(node_title=cur_dimension[1]))  # Node title start
+        f.write('\\n({subject_area_id})'.format(subject_area_id=cur_dimension[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
+    f.write('\n')
+
+    f.write("# Fact(s)\n")
+    for cur_fact in fct:
+        f.write('"' + cur_fact[0] + '"')  # Node name
+        f.write(' [shape="box", style="filled", fillcolor="lightgoldenrodyellow"')  # Node shape
+        f.write(' label = "{node_title}'.format(node_title=cur_fact[1]))  # Node title start
+        f.write('\\n({subject_area_id})'.format(subject_area_id=cur_fact[4]))  # Add subject area id
+        f.write('"];\n')  # Close up the label
+    f.write('\n')
+
+    # Document reference roles (dim to dim)
+    f.write("# Reference role(s)\n")
+    for cur_ref in ddr:
+        f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
+        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to dimension roles
+    f.write("# Fact to dimension\n")
+    for cur_fk in fdr:
+        f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
+        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+    f.write('\n')
+
+    # Document fact to fact relationships
+    f.write("# Fact to fact\n")
+    for cur_ff in ffr:
+        f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
+        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+    f.write('\n')
+
+    # Finish up the output
+    f.write("}" + '\n')
+    f.close()
+
 
 # Configure the argument parser
 parser = argparse.ArgumentParser(prog='amp_viz', formatter_class=argparse.RawTextHelpFormatter,
@@ -159,7 +399,8 @@ md_rows = md_cur.fetchall()
 md_ff_ref = [list(x) for x in md_rows]
 
 # Create an overall graph
-create_dot(True, parms.output_file + '-all.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
+create_dot_cluster(parms.output_file + '-all.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
+create_dot_all_no_sub(parms.output_file + '-all-ns.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
 
 # Loop through subject areas creating a graph for each one
 for cur_sub in md_subjects:
@@ -196,7 +437,8 @@ for cur_sub in md_subjects:
     new_ffr = list(cur_ffr for cur_ffr,_ in itertools.groupby(cur_ffr))
 
     # Create a separate file for each subject area
-    create_dot(False, parms.output_file + '-' + cur_sub[1] + '.gv', cur_sub, new_dim, new_fct, new_ddr, new_fdr, new_ffr)
+    create_dot_sub(parms.output_file + '-' + cur_sub[1] + '.gv', cur_sub, new_dim, new_fct, new_ddr, new_fdr, new_ffr)
+    create_dot_sub_no_sub(parms.output_file + '-' + cur_sub[1] + '-ns.gv', cur_sub, new_dim, new_fct, new_ddr, new_fdr, new_ffr)
 
 # We're done here!
 md_conn.close()

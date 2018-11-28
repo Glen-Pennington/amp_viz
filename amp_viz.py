@@ -3,7 +3,8 @@ import argparse
 import itertools
 import pyodbc
 
-def create_dot_cluster (file_name, sub, dim, fct, ddr, fdr, ffr):
+# Create dot file for all subject areas, cluster nodes by subject area
+def create_dot_all_cluster (file_name, sub, dim, fct, ddr, fdr, ffr):
     # Open the output file
     f = open(file_name, 'w')
 
@@ -61,7 +62,7 @@ def create_dot_cluster (file_name, sub, dim, fct, ddr, fdr, ffr):
     f.write("}" + '\n')
     f.close()
 
-
+# Create dot file for all subject areas, not clustered, with nodes for each subject area and relate each fact/dim to the subject area
 def create_dot_all (file_name, sub, dim, fct, ddr, fdr, ffr):
     # Open the output file
     f = open(file_name, 'w')
@@ -137,7 +138,8 @@ def create_dot_all (file_name, sub, dim, fct, ddr, fdr, ffr):
     f.close()
 
 
-def create_dot_all_no_sub (file_name, sub, dim, fct, ddr, fdr, ffr):
+# Create dot file for all facts and dimensions in each subject area; no nodes for the subject areas
+def create_dot_all_ns (file_name, sub, dim, fct, ddr, fdr, ffr):
     # Open the output file
     f = open(file_name, 'w')
 
@@ -192,6 +194,7 @@ def create_dot_all_no_sub (file_name, sub, dim, fct, ddr, fdr, ffr):
     f.close()
 
 
+# Create a subject area specific dot file, create nodes for the related subject areas
 def create_dot_sub(file_name, sub, dim, fct, ddr, fdr, ffr):
     # Open the output file
     f = open(file_name, 'w')
@@ -273,7 +276,8 @@ def create_dot_sub(file_name, sub, dim, fct, ddr, fdr, ffr):
     f.close()
 
 
-def create_dot_sub_no_sub(file_name, sub, dim, fct, ddr, fdr, ffr):
+# Create a subject area specific dot file, no nodes for the related subject areas
+def create_dot_sub_ns(file_name, sub, dim, fct, ddr, fdr, ffr):
     # Open the output file
     f = open(file_name, 'w')
 
@@ -398,9 +402,10 @@ md_cur.execute("""select aft1.fact_table_guid, aft1.fact_table_name, aft2.fact_t
 md_rows = md_cur.fetchall()
 md_ff_ref = [list(x) for x in md_rows]
 
-# Create an overall graph
-create_dot_cluster(parms.output_file + '-all.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
-create_dot_all_no_sub(parms.output_file + '-all-ns.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
+# Create overall graphs
+create_dot_all_cluster(parms.output_file + '-all-cluster.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
+create_dot_all(parms.output_file + '-all.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
+create_dot_all_ns(parms.output_file + '-all-ns.gv', md_subjects, md_dimensions, md_facts, md_dim_ref, md_fk_ref, md_ff_ref)
 
 # Loop through subject areas creating a graph for each one
 for cur_sub in md_subjects:
@@ -436,9 +441,9 @@ for cur_sub in md_subjects:
     cur_fdr.sort()
     new_ffr = list(cur_ffr for cur_ffr,_ in itertools.groupby(cur_ffr))
 
-    # Create a separate file for each subject area
+    # Create separate dot files for each subject area
     create_dot_sub(parms.output_file + '-' + cur_sub[1] + '.gv', cur_sub, new_dim, new_fct, new_ddr, new_fdr, new_ffr)
-    create_dot_sub_no_sub(parms.output_file + '-' + cur_sub[1] + '-ns.gv', cur_sub, new_dim, new_fct, new_ddr, new_fdr, new_ffr)
+    create_dot_sub_ns(parms.output_file + '-' + cur_sub[1] + '-ns.gv', cur_sub, new_dim, new_fct, new_ddr, new_fdr, new_ffr)
 
 # We're done here!
 md_conn.close()

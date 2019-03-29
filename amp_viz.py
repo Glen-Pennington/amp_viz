@@ -172,21 +172,24 @@ def create_dot_all_ns (file_name, sub, dim, fct, ddr, fdr, ffr):
     f.write("# Reference role(s)\n")
     for cur_ref in ddr:
         f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
-        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+        # f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+        f.write(' [color="blue"];\n')  # Reference role name
     f.write('\n')
 
     # Document fact to dimension roles
     f.write("# Fact to dimension\n")
     for cur_fk in fdr:
         f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
-        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+        # f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+        f.write(' [color="red"];\n')  # Reference role name
     f.write('\n')
 
     # Document fact to fact relationships
     f.write("# Fact to fact\n")
     for cur_ff in ffr:
         f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
-        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+        # f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+        f.write(' [color="green"];\n')  # Reference role name
     f.write('\n')
 
     # Finish up the output
@@ -286,7 +289,7 @@ def create_dot_sub_ns(file_name, sub, dim, fct, ddr, fdr, ffr):
 
     f.write('graph [fontname="Calibri" fontsize="8"];\n')
     f.write('node [fontname="Calibri" fontsize="8"];\n')
-    f.write('edge [fontname="Calibri" fontsize="8"];\n')
+    f.write('edge [fontname="Calibri" fontsize="8"];\n\n')
 
     f.write("# Dimension(s)\n")
     for cur_dimension in dim:
@@ -310,21 +313,24 @@ def create_dot_sub_ns(file_name, sub, dim, fct, ddr, fdr, ffr):
     f.write("# Reference role(s)\n")
     for cur_ref in ddr:
         f.write('"{type_guid}" -> "{referenced_type_guid}"'.format(type_guid=cur_ref[2], referenced_type_guid=cur_ref[3]))
-        f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+        #f.write(' [label = "{reference_role_name}", color="blue", fontcolor="blue"];\n'.format(reference_role_name=cur_ref[1]))  # Reference role name
+        f.write(' [color="blue"];\n')  # Reference role name
     f.write('\n')
 
     # Document fact to dimension roles
     f.write("# Fact to dimension\n")
     for cur_fk in fdr:
         f.write('"{fact_table_guid}" -> "{type_guid}"'.format(fact_table_guid=cur_fk[0], type_guid=cur_fk[2]))
-        f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+        #f.write(' [label = "{fact_table_name} to {type_name}", color="red", fontcolor="red"];\n'.format(fact_table_name=cur_fk[1], type_name=cur_fk[3]))  # Reference role name
+        f.write(' [color="red"];\n')  # Reference role name
     f.write('\n')
 
     # Document fact to fact relationships
     f.write("# Fact to fact\n")
     for cur_ff in ffr:
         f.write('"{fact_table_guid1}" -> "{fact_table_guid2}"'.format(fact_table_guid1=cur_ff[0], fact_table_guid2=cur_ff[2]))
-        f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+        #f.write(' [label = "{fact_table_name1} to {fact_table_name2}", color="green", fontcolor="green"];\n'.format(fact_table_name1=cur_ff[1], fact_table_name2=cur_ff[3]))  # Reference role name
+        f.write(' [color="green"];\n')
     f.write('\n')
 
     # Finish up the output
